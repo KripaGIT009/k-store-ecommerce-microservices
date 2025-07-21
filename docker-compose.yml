@@ -58,6 +58,20 @@ services:
     networks:
       - kstore-network
 
+  postgres-notifications:
+    image: postgres:16-alpine
+    container_name: kstore-postgres-notifications
+    environment:
+      POSTGRES_DB: k_store_notifications
+      POSTGRES_USER: kstore_user
+      POSTGRES_PASSWORD: kstore123
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_notifications_data:/var/lib/postgresql/data
+    networks:
+      - kstore-network
+
   # Redis for Caching
   redis:
     image: redis:7-alpine
@@ -207,11 +221,22 @@ services:
       context: ./k-store-notification-service
       dockerfile: Dockerfile
     container_name: kstore-notification-service
+    ports:
+      - "8085:8085"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-notifications:5432/k_store_notifications
+      SPRING_DATASOURCE_USERNAME: kstore_user
+      SPRING_DATASOURCE_PASSWORD: kstore123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
       EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-server:8761/eureka/
       AWS_REGION: us-east-1
+      SMTP_USERNAME: ${SMTP_USERNAME:-your-email@gmail.com}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-your-app-password}
     depends_on:
+      - postgres-notifications
+      - redis
       - discovery-server
     networks:
       - kstore-network
@@ -221,6 +246,7 @@ volumes:
   postgres_products_data:
   postgres_orders_data:
   postgres_payments_data:
+  postgres_notifications_data:
   redis_data:
 
 networks:
