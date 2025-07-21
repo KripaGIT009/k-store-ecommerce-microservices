@@ -1,0 +1,228 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Databases
+  postgres-users:
+    image: postgres:16-alpine
+    container_name: kstore-postgres-users
+    environment:
+      POSTGRES_DB: kstore_users
+      POSTGRES_USER: kstore
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_users_data:/var/lib/postgresql/data
+    networks:
+      - kstore-network
+
+  postgres-products:
+    image: postgres:16-alpine
+    container_name: kstore-postgres-products
+    environment:
+      POSTGRES_DB: kstore_products
+      POSTGRES_USER: kstore
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_products_data:/var/lib/postgresql/data
+    networks:
+      - kstore-network
+
+  postgres-orders:
+    image: postgres:16-alpine
+    container_name: kstore-postgres-orders
+    environment:
+      POSTGRES_DB: kstore_orders
+      POSTGRES_USER: kstore
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_orders_data:/var/lib/postgresql/data
+    networks:
+      - kstore-network
+
+  postgres-payments:
+    image: postgres:16-alpine
+    container_name: kstore-postgres-payments
+    environment:
+      POSTGRES_DB: kstore_payments
+      POSTGRES_USER: kstore
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_payments_data:/var/lib/postgresql/data
+    networks:
+      - kstore-network
+
+  # Redis for Caching
+  redis:
+    image: redis:7-alpine
+    container_name: kstore-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - kstore-network
+
+  # Config Server
+  config-server:
+    build:
+      context: ./k-store-config-server
+      dockerfile: Dockerfile
+    container_name: kstore-config-server
+    ports:
+      - "8888:8888"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    networks:
+      - kstore-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8888/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Discovery Server
+  discovery-server:
+    build:
+      context: ./k-store-discovery-server
+      dockerfile: Dockerfile
+    container_name: kstore-discovery-server
+    ports:
+      - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      config-server:
+        condition: service_healthy
+    networks:
+      - kstore-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./k-store-api-gateway
+      dockerfile: Dockerfile
+    container_name: kstore-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-server:8761/eureka/
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    networks:
+      - kstore-network
+
+  # User Service
+  user-service:
+    build:
+      context: ./k-store-user-service
+      dockerfile: Dockerfile
+    container_name: kstore-user-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-users:5432/kstore_users
+      SPRING_DATASOURCE_USERNAME: kstore
+      SPRING_DATASOURCE_PASSWORD: password
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      JWT_SECRET: mySecretKey
+    depends_on:
+      - postgres-users
+      - discovery-server
+    networks:
+      - kstore-network
+
+  # Product Service
+  product-service:
+    build:
+      context: ./k-store-product-service
+      dockerfile: Dockerfile
+    container_name: kstore-product-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-products:5432/kstore_products
+      SPRING_DATASOURCE_USERNAME: kstore
+      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-server:8761/eureka/
+    depends_on:
+      - postgres-products
+      - redis
+      - discovery-server
+    networks:
+      - kstore-network
+
+  # Order Service
+  order-service:
+    build:
+      context: ./k-store-order-service
+      dockerfile: Dockerfile
+    container_name: kstore-order-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-orders:5432/kstore_orders
+      SPRING_DATASOURCE_USERNAME: kstore
+      SPRING_DATASOURCE_PASSWORD: password
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-server:8761/eureka/
+    depends_on:
+      - postgres-orders
+      - discovery-server
+    networks:
+      - kstore-network
+
+  # Payment Service
+  payment-service:
+    build:
+      context: ./k-store-payment-service
+      dockerfile: Dockerfile
+    container_name: kstore-payment-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-payments:5432/kstore_payments
+      SPRING_DATASOURCE_USERNAME: kstore
+      SPRING_DATASOURCE_PASSWORD: password
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-server:8761/eureka/
+    depends_on:
+      - postgres-payments
+      - discovery-server
+    networks:
+      - kstore-network
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ./k-store-notification-service
+      dockerfile: Dockerfile
+    container_name: kstore-notification-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      AWS_REGION: us-east-1
+    depends_on:
+      - discovery-server
+    networks:
+      - kstore-network
+
+volumes:
+  postgres_users_data:
+  postgres_products_data:
+  postgres_orders_data:
+  postgres_payments_data:
+  redis_data:
+
+networks:
+  kstore-network:
+    driver: bridge
