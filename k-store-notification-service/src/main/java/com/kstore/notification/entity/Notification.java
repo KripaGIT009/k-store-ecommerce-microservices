@@ -101,6 +101,8 @@ public class Notification {
         WELCOME,
         PROMOTIONAL,
         SYSTEM_ALERT,
+        SYSTEM,
+        TRANSACTIONAL,
         CUSTOM
     }
 
