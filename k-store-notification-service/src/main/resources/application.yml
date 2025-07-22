@@ -5,8 +5,32 @@ spring:
   application:
     name: k-store-notification-service
   
-  datasource:
-    url: jdbc:postgresql://localhost:5432/k_store_notifications
+# Notification settings
+notification:
+  firebase:
+    config-file: firebase-service-account.json
+    database-url: ${FIREBASE_DATABASE_URL:}
+  
+  # Notification settings
+  default:
+    max-attempts: 3
+    retry-delay-minutes: 5
+  
+  # Rate limiting
+  rate-limit:
+    email: 100 # per minute
+    sms: 50 # per minute
+    push: 200 # per minute
+
+  # Kafka topics
+  kafka:
+    topics:
+      notification-events: notification-events
+      bulk-notification-events: bulk-notification-events
+      user-events: user-events
+      order-events: order-events
+      payment-events: payment-events
+      product-events: product-events   url: jdbc:postgresql://localhost:5432/k_store_notifications
     username: kstore_user
     password: kstore123
     driver-class-name: org.postgresql.Driver
@@ -29,6 +53,25 @@ spring:
         max-active: 8
         max-idle: 8
         min-idle: 0
+
+  # Kafka configuration
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.value.default.type: com.kstore.notification.dto.NotificationRequest
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    listener:
+      ack-mode: manual_immediate
 
   # Email configuration
   mail:
