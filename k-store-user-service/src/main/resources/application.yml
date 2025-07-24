@@ -3,42 +3,124 @@ server:
 
 spring:
   application:
-    name: k-store-user-service
-  config:
-    import: "optional:configserver:http://localhost:8888"
+    name: K-STORE-USER-SERVICE
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  # config:
+  #   import: "optional:configserver:http://localhost:8888"
+  cloud:
+    config:
+      enabled: false
+  
+  # Database Configuration (overridden by profile-specific configs)
   datasource:
-    url: jdbc:postgresql://localhost:5432/kstore_users
-    username: ${DB_USERNAME:kstore}
-    password: ${DB_PASSWORD:password}
-    driver-class-name: org.postgresql.Driver
+    url: ${DATABASE_URL:jdbc:h2:mem:userdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    username: ${DATABASE_USERNAME:sa}
+    password: ${DATABASE_PASSWORD:}
+    driver-class-name: ${DATABASE_DRIVER:org.h2.Driver}
+    hikari:
+      connection-timeout: 20000
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 300000
+      max-lifetime: 1200000
+  
+  # JPA Configuration
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
     show-sql: true
+    defer-datasource-initialization: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
+        hbm2ddl:
+          auto: create-drop
+  
+  # Flyway Configuration (disabled by default, enabled per profile)
+  flyway:
+    enabled: false
+  
+  # Security Configuration
+  security:
+    oauth2:
+      authorizationserver:
+        issuer: http://localhost:8081
+        client:
+          k-store-client:
+            registration:
+              client-id: k-store-client
+              client-secret: k-store-secret
+              client-authentication-methods:
+                - client_secret_basic
+                - client_secret_post
+              authorization-grant-types:
+                - authorization_code
+                - refresh_token
+                - client_credentials
+              redirect-uris:
+                - "http://localhost:8080/login/oauth2/code/k-store"
+                - "http://localhost:3000/callback"
+              scopes:
+                - openid
+                - profile
+                - email
+                - read
+                - write
+          api-gateway:
+            registration:
+              client-id: api-gateway
+              client-secret: gateway-secret
+              client-authentication-methods:
+                - client_secret_basic
+              authorization-grant-types:
+                - client_credentials
+              scopes:
+                - read
+                - write
+                - admin
 
 eureka:
   client:
-    serviceUrl:
+    enabled: true
+    service-url:
       defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+    registry-fetch-interval-seconds: 5
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 10
 
+# Management Configuration
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
 
+# JWT Configuration (for backward compatibility)
 jwt:
-  secret: ${JWT_SECRET:mySecretKey}
+  secret: ${JWT_SECRET:kstore-microservices-super-secret-key-that-is-secure-enough-for-production-use-256-bits}
   expiration: 86400000 # 24 hours in milliseconds
 
+# Logging Configuration
 logging:
   level:
-    com.kstore.user: DEBUG
+    com.kstore: DEBUG
     org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

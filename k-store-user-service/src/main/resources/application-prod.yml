@@ -1,0 +1,68 @@
+# Production Profile Configuration
+spring:
+  profiles:
+    active: prod
+  
+  # PostgreSQL Database for Production
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/kstore_user}
+    username: ${DATABASE_USERNAME:kstore_user}
+    password: ${DATABASE_PASSWORD:password123}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 30000
+      minimum-idle: 10
+      maximum-pool-size: 50
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+  
+  # JPA Configuration for Production
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+        connection:
+          provider_disables_autocommit: true
+        cache:
+          use_second_level_cache: true
+          use_query_cache: true
+          region:
+            factory_class: org.hibernate.cache.ehcache.EhCacheRegionFactory
+  
+  # Flyway Configuration for Production
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+    clean-disabled: true
+  
+  # Security Configuration
+  security:
+    oauth2:
+      authorizationserver:
+        issuer: ${OAUTH2_ISSUER:http://localhost:8081}
+
+# Logging for Production
+logging:
+  level:
+    com.kstore: INFO
+    org.springframework.security: WARN
+    org.springframework.security.oauth2: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type: WARN
+    root: WARN
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: /var/log/k-store/user-service.log
+    max-size: 100MB
+    max-history: 30

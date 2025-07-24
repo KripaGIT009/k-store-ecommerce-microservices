@@ -1,7 +1,9 @@
 package com.kstore.notification.service.impl;
 
 import com.kstore.notification.entity.Notification;
+import com.kstore.notification.entity.NotificationInbox;
 import com.kstore.notification.service.NotificationChannelService;
+import com.kstore.notification.service.NotificationInboxService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -14,28 +16,33 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class WebNotificationService implements NotificationChannelService {
 
+    private final NotificationInboxService inboxService;
+
     @Override
     @Async("notificationTaskExecutor")
     public CompletableFuture<Boolean> sendNotification(Notification notification) {
         try {
-            log.info("Processing web notification for user: {} with content: {}", 
+            log.info("Processing web notification for user: {} with subject: {}", 
                     notification.getUserId(), notification.getSubject());
 
             // Since we're using Kafka for real-time notifications,
-            // this service can integrate with frontend clients via:
-            // 1. Server-Sent Events (SSE) endpoints
-            // 2. REST API polling endpoints
-            // 3. Database storage for user notification inbox
-            // 4. Browser push notifications
+            // this service integrates with frontend clients by storing 
+            // notifications in the database for user inbox retrieval
             
-            // For demonstration, we'll log the notification and mark as sent
-            // In a real implementation, this could store the notification
-            // in a user's inbox table for later retrieval via REST API
+            // Save notification to user's inbox for later retrieval
+            NotificationInbox inboxNotification = inboxService.saveToInbox(notification);
             
-            log.info("Web notification processed successfully for user: {}", notification.getUserId());
+            log.info("Web notification saved to inbox with ID: {} for user: {}", 
+                    inboxNotification.getId(), notification.getUserId());
             
-            // Update notification metadata
-            notification.setExternalMessageId("WEB_" + System.currentTimeMillis());
+            // Update notification metadata with inbox reference
+            notification.setExternalMessageId("INBOX_" + inboxNotification.getId());
+            
+            // Frontend clients can now:
+            // 1. Poll REST API endpoints to get user notifications
+            // 2. Use Server-Sent Events (SSE) for real-time updates
+            // 3. Subscribe to user-specific Kafka topics for instant delivery
+            // 4. Use browser push notifications for offline users
             
             return CompletableFuture.completedFuture(true);
             

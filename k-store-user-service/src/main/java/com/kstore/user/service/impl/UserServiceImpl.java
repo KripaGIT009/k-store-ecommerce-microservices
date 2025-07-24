@@ -8,10 +8,9 @@ import com.kstore.user.dto.UserResponse;
 import com.kstore.user.entity.User;
 import com.kstore.user.repository.UserRepository;
 import com.kstore.user.service.UserService;
+import com.kstore.user.service.impl.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -50,7 +49,7 @@ public class UserServiceImpl implements UserService {
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .phoneNumber(request.getPhoneNumber())
-                .roles(Set.of(User.Role.USER))
+                .roles(Set.of()) // Initialize with empty roles set
                 .build();
         
         user = userRepository.save(user);

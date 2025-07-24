@@ -30,7 +30,11 @@ notification:
       user-events: user-events
       order-events: order-events
       payment-events: payment-events
-      product-events: product-events   url: jdbc:postgresql://localhost:5432/k_store_notifications
+      product-events: product-events
+  
+  # Database Configuration (PostgreSQL)
+  datasource:
+    url: jdbc:postgresql://localhost:5432/k_store_notifications
     username: kstore_user
     password: kstore123
     driver-class-name: org.postgresql.Driver

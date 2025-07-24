@@ -4,45 +4,62 @@ server:
 spring:
   application:
     name: k-store-api-gateway
-  config:
-    import: "optional:configserver:http://localhost:8888"
+  web:
+    resources:
+      add-mappings: false
   cloud:
     gateway:
+      # Enable service discovery routing
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+          filters:
+            - StripPrefix=1
+      # Additional explicit routes for better control
       routes:
         - id: user-service
-          uri: lb://k-store-user-service
+          uri: lb://K-STORE-USER-SERVICE
           predicates:
-            - Path=/api/users/**
-          filters:
-            - StripPrefix=2
+            - Path=/users/**
+        - id: user-service-auth
+          uri: lb://K-STORE-USER-SERVICE
+          predicates:
+            - Path=/auth/**
+        - id: user-service-health
+          uri: http://localhost:8082
+          predicates:
+            - Path=/user-service/actuator/**
+        - id: gateway-actuator
+          uri: http://localhost:8080
+          predicates:
+            - Path=/actuator/**
         - id: product-service
-          uri: lb://k-store-product-service
+          uri: lb://K-STORE-PRODUCT-SERVICE
           predicates:
-            - Path=/api/products/**
-          filters:
-            - StripPrefix=2
-        - id: order-service
-          uri: lb://k-store-order-service
+            - Path=/products/**
+        - id: order-service  
+          uri: http://localhost:8084
           predicates:
-            - Path=/api/orders/**
-          filters:
-            - StripPrefix=2
+            - Path=/orders/**
         - id: payment-service
-          uri: lb://k-store-payment-service
+          uri: http://localhost:8085
           predicates:
-            - Path=/api/payments/**
-          filters:
-            - StripPrefix=2
+            - Path=/payments/**
         - id: notification-service
-          uri: lb://k-store-notification-service
+          uri: http://localhost:8086
           predicates:
-            - Path=/api/notifications/**
-          filters:
-            - StripPrefix=2
+            - Path=/notifications/**
+      # Compatibility settings
+      httpclient:
+        connect-timeout: 30000
+        response-timeout: 30s
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
       globalcors:
         corsConfigurations:
           '[/**]':
-            allowedOrigins: "*"
+            allowedOriginPatterns: "*"
             allowedMethods:
               - GET
               - POST
@@ -50,14 +67,10 @@ spring:
               - DELETE
               - OPTIONS
             allowedHeaders: "*"
-            allowCredentials: true
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
 
 eureka:
   client:
+    enabled: true
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/
 
@@ -65,12 +78,16 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,gateway
+        include: health,info,gateway,routes
   endpoint:
     health:
       show-details: always
+    gateway:
+      enabled: true
 
 logging:
   level:
     org.springframework.cloud.gateway: DEBUG
     org.springframework.cloud.loadbalancer: DEBUG
+    org.springframework.web.reactive: DEBUG
+    reactor.netty: DEBUG

@@ -1,0 +1,44 @@
+# User Service specific configuration
+server:
+  port: 8082
+
+spring:
+  application:
+    name: k-store-user-service
+  datasource:
+    url: jdbc:h2:mem:userdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: 
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    database-platform: org.hibernate.dialect.H2Dialect
+  flyway:
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+# OAuth2 Authorization Server Configuration
+oauth2:
+  server:
+    issuer: http://localhost:8082
+    clients:
+      - client-id: k-store-client
+        client-secret: k-store-secret
+        grant-types: [authorization_code, refresh_token, client_credentials]
+        scopes: [read, write]
+        redirect-uris: [http://localhost:8080/login/oauth2/code/k-store]
+      - client-id: k-store-api-gateway
+        client-secret: gateway-secret
+        grant-types: [client_credentials]
+        scopes: [read, write]
+
+# JWT Configuration
+jwt:
+  secret: mySecretKey123456789012345678901234567890
+  expiration: 3600000

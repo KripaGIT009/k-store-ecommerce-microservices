@@ -13,7 +13,7 @@
     </parent>
 
     <artifactId>k-store-discovery-server</artifactId>
-    <name>K-Store Discovery Server</name>
+        <name>K-Store Discovery Server</name>
     <description>Service discovery server for K-Store microservices</description>
 
     <dependencies>
@@ -36,6 +36,13 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

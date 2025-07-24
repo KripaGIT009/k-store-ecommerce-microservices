@@ -31,7 +31,7 @@ public class JwtTokenProvider {
         Date expiryDate = new Date(now.getTime() + jwtExpiration);
 
         String roles = user.getRoles().stream()
-                .map(role -> "ROLE_" + role.name())
+                .map(role -> role.getName())
                 .collect(Collectors.joining(","));
 
         return Jwts.builder()

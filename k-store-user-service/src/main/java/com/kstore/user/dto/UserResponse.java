@@ -1,6 +1,6 @@
 package com.kstore.user.dto;
 
-import com.kstore.user.entity.User;
+import com.kstore.user.entity.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,7 +21,7 @@ public class UserResponse {
     private String firstName;
     private String lastName;
     private String phoneNumber;
-    private Set<User.Role> roles;
+    private Set<Role> roles;
     private boolean enabled;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

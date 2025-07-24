@@ -1,0 +1,42 @@
+# API Gateway specific configuration
+server:
+  port: 8080
+
+spring:
+  application:
+    name: k-store-api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: user-service
+          uri: lb://k-store-user-service
+          predicates:
+            - Path=/users/**,/auth/**
+        - id: product-service
+          uri: lb://k-store-product-service
+          predicates:
+            - Path=/products/**
+        - id: order-service
+          uri: lb://k-store-order-service
+          predicates:
+            - Path=/orders/**
+        - id: notification-service
+          uri: lb://k-store-notification-service
+          predicates:
+            - Path=/notifications/**
+  security:
+    oauth2:
+      client:
+        registration:
+          k-store:
+            client-id: k-store-api-gateway
+            client-secret: gateway-secret
+            authorization-grant-type: client_credentials
+            scope: read,write
+        provider:
+          k-store:
+            token-uri: http://localhost:8082/oauth2/token
